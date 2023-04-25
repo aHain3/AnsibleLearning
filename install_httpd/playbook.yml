@@ -1,0 +1,32 @@
+- hosts: group1
+  become: true
+  become_user: root
+  tasks:
+  - name: Install httpd
+    yum:
+      name: httpd
+      state: latest
+  - name: Start HTTPD
+    systemd: name=httpd state=started enabled=yes
+  - name: add group devpoo
+    group:
+      name: devpoo
+      state: present
+  - name: create user webdev and add to group devpoo
+    user:
+      name: webdev
+      password: "{{ 'password' | password_hash('sha512') }}"
+      groups: devpoo
+      state: present
+      shell: /bin/bash       # Defaults to /bin/bash
+      system: no             # Defaults to no
+      createhome: no        # Defaults to yes
+  - name: set owner of var 
+    file: path=/var/www/html owner=webdev group=devpoo mode=0775 state=directory recurse=yes
+  - name: send html file to var/www/html
+    ansible.builtin.copy:
+      src: ./index.html
+      dest: /var/www/html
+      owner: webdev
+      group: devpoo
+      mode: u=rw,g=rw,o=r

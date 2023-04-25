@@ -1,0 +1,106 @@
+- hosts: group1
+  become: true
+  become_user: root
+  tasks:
+  - name: create user
+    user:
+      name: promuser
+      password: "{{ 'password' | password_hash('sha512') }}"
+      state: present
+      create_home: no
+      system: no
+  
+  - name: create directory
+    file:
+      path: /etc/prometheus
+      state: directory
+  - name: create directory
+    file:
+      path: /var/lib/prometheus
+      state: directory
+
+  - name: Download prom
+    ansible.builtin.get_url:
+      url: https://github.com/prometheus/prometheus/releases/download/v2.19.0/prometheus-2.19.0.linux-amd64.tar.gz
+      dest: /tmp
+  - name: Extract prometheus
+    ansible.builtin.unarchive:
+      remote_src: yes
+      src: /tmp/prometheus-2.19.0.linux-amd64.tar.gz
+      dest: /tmp
+  - name: Copy prom to bin
+    ansible.builtin.copy:
+      remote_src: yes
+      src: /tmp/prometheus-2.19.0.linux-amd64/prometheus
+      dest: /usr/local/bin    
+  - name: Copy promtool to bin
+    ansible.builtin.copy:
+      remote_src: yes
+      src: /tmp/prometheus-2.19.0.linux-amd64/promtool
+      dest: /usr/local/bin/  
+  - name: Copy consoles to prom directory
+    ansible.builtin.copy:
+      remote_src: yes
+      src: /tmp/prometheus-2.19.0.linux-amd64/consoles
+      dest: /etc/prometheus
+  - name: Copy console_libraries to prom directory
+    ansible.builtin.copy:
+      remote_src: yes
+      src: /tmp/prometheus-2.19.0.linux-amd64/console_libraries
+      dest: /etc/prometheus
+  - name: Copy promtool to bin
+    ansible.builtin.copy:
+      remote_src: yes
+      src: /tmp/prometheus-2.19.0.linux-amd64/promtool
+      dest: /usr/local/bin/
+
+  - name: Delete content & directory
+    ansible.builtin.file:
+      state: absent
+      path: /tmp/prometheus-2.19.0.linux-amd64.tar.gz
+  - name: Delete content & directory
+    ansible.builtin.file:
+      state: absent
+      path: /tmp/prometheus-2.19.0.linux-amd64
+  - name: send config file to prometheus
+    ansible.builtin.copy:
+      src: ./prometheus.yml
+      dest: /etc/prometheus/prometheus.yml
+      owner: promuser
+
+  - name: send config file to prometheus
+    ansible.builtin.copy:
+      src: ./prometheus.service
+      dest: /etc/systemd/system/prometheus.service
+      owner: promuser
+      
+  - name: chowning files and binaries 1
+    file: path=/etc/prometheus owner=promuser mode=774
+  - name: chowning files and binaries 2
+    file: path=/usr/local/bin/prometheus owner=promuser mode=774 
+  - name: chowning files and binaries 3
+    file: path=/usr/local/bin/promtool owner=promuser mode=774
+  - name: chowning files and binaries 4
+    file: path=/etc/prometheus/consoles owner=promuser mode=774 recurse=yes
+  - name: chowning files and binaries 5
+    file: path=/etc/prometheus/console_libraries owner=promuser mode=774 recurse=yes
+  - name: chowning files and binaries 6
+    file: path=/var/lib/prometheus owner=promuser mode=774 recurse=yes 
+
+  
+  # - name: Start prometheus
+  #   systemd: name=prometheus state=started enabled=yes daemon_reload=true
+
+  - name: start prometheus
+    ansible.builtin.systemd:
+      state: started
+      daemon_reload: true
+      service: prometheus
+      enabled: true
+
+
+  # - name: Install prometheus 
+  #   yum:
+  #     name: prometheus
+  #     state: latest
+      
