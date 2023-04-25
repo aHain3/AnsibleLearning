@@ -2,10 +2,15 @@
   become: true
   become_user: root
   tasks:
+  - name: add group prometheus
+    group:
+      name: prometheus
+      state: present
   - name: create user
     user:
-      name: promuser
+      name: prometheus
       password: "{{ 'password' | password_hash('sha512') }}"
+      groups: prometheus
       state: present
       create_home: no
       system: no
@@ -53,6 +58,7 @@
       remote_src: yes
       src: /tmp/prometheus-2.19.0.linux-amd64/promtool
       dest: /usr/local/bin/
+      
 
   - name: Delete content & directory
     ansible.builtin.file:
@@ -66,26 +72,28 @@
     ansible.builtin.copy:
       src: ./prometheus.yml
       dest: /etc/prometheus/prometheus.yml
-      owner: promuser
+      owner: prometheus
+      group: prometheus
 
   - name: send config file to prometheus
     ansible.builtin.copy:
       src: ./prometheus.service
       dest: /etc/systemd/system/prometheus.service
-      owner: promuser
-      
+      owner: prometheus
+      group: prometheus
+
   - name: chowning files and binaries 1
-    file: path=/etc/prometheus owner=promuser mode=774
+    file: path=/etc/prometheus owner=prometheus group=prometheus mode=774
   - name: chowning files and binaries 2
-    file: path=/usr/local/bin/prometheus owner=promuser mode=774 
+    file: path=/usr/local/bin/prometheus owner=prometheus group=prometheus mode=774 
   - name: chowning files and binaries 3
-    file: path=/usr/local/bin/promtool owner=promuser mode=774
+    file: path=/usr/local/bin/promtool owner=prometheus group=prometheus mode=774
   - name: chowning files and binaries 4
-    file: path=/etc/prometheus/consoles owner=promuser mode=774 recurse=yes
+    file: path=/etc/prometheus/consoles owner=prometheus group=prometheus mode=774 recurse=yes
   - name: chowning files and binaries 5
-    file: path=/etc/prometheus/console_libraries owner=promuser mode=774 recurse=yes
+    file: path=/etc/prometheus/console_libraries owner=prometheus group=prometheus mode=774 recurse=yes
   - name: chowning files and binaries 6
-    file: path=/var/lib/prometheus owner=promuser mode=774 recurse=yes 
+    file: path=/var/lib/prometheus owner=prometheus group=prometheus mode=774 recurse=yes 
 
   
   # - name: Start prometheus
